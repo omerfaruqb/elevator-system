@@ -25,54 +25,63 @@ public:
 
     void newCall(int from, int to)
     {
-        int bestElevatorIndex = -1;
-        int minDistance = std::numeric_limits<int>::max();
+        Elevator *bestElevator = nullptr;
+        int bestElevatorCost = std::numeric_limits<int>::max();
 
-        for (int i = 0; i < elevators.size(); ++i)
+        for (Elevator &elevator : elevators)
         {
-            Elevator &elevator = elevators[i];
-
-            if (elevator.isIdle())
+            int shouldAscend = from < to;
+            bool onTheWay = (elevator.isAscending() == shouldAscend) &&
+                            ((shouldAscend && elevator.currentFloor <= from) || (!shouldAscend && elevator.currentFloor >= from));
+            
+            if (elevator.isIdle() || onTheWay)
             {
-                int distance = elevator.distanceToFloor(from);
-                if (distance < minDistance)
+                int waitingTime = elevator.distanceToFloor(from) + abs(to - from);
+                int energyConsumed = elevator.isIdle() ? elevator.distanceToFloor(from) : 0;
+                int score = waitingTime + energyConsumed;
+
+                if (score < bestElevatorCost)
                 {
-                    bestElevatorIndex = i;
-                    minDistance = distance;
+                    bestElevator = &elevator;
+                    bestElevatorCost = score;
                 }
             }
-        }
 
-        if (bestElevatorIndex == -1)
-        {
-            for (int i = 0; i < elevators.size(); ++i)
+            if (bestElevator != nullptr)
             {
-                Elevator &elevator = elevators[i];
-                int distance = elevator.distanceToFloor(from);
-                if (distance < minDistance)
-                {
-                    bestElevatorIndex = i;
-                    minDistance = distance;
-                }
+                bestElevator->addPassenger(from, to);
+                // numVisitors++;
             }
-        }
+            else
+            {
+                for (Elevator &elevator : elevators)
+                {
+                    int waitingTime = elevator.distanceToLastStop() +
+                                      abs(elevator.lastStop() - from) + abs(to - from);
+                    int energyConsumed = 2 * abs(elevator.lastStop() - from);
+                    int cost = waitingTime + energyConsumed;
 
-        if (bestElevatorIndex != -1)
-        {
-            Elevator &elevator = elevators[bestElevatorIndex];
-            elevator.addStop(from);
-            elevator.addStop(to);
-            numVisitors++;
+                    if (cost < bestElevatorCost)
+                    {
+                        bestElevator = &elevator;
+                        bestElevatorCost = cost;
+                    }
+                }
+                bestElevator->addPassengerReverse(from, to);
+            }
         }
     }
 
     void updateElevators()
     {
         for (auto &elevator : elevators)
-        {
-            int move = elevator.move();
-            totalEnergyConsumed += move;
-            totalWaitingTime += move * elevator.passengers;
+        {   
+            int previousPassengers = elevator.passengers;
+            if(elevator.move()) {
+                totalEnergyConsumed++;
+                totalWaitingTime += previousPassengers;
+            }
+            // std::cout << "Previous passengers: " << previousPassengers << std::endl;
         }
     }
 
@@ -90,6 +99,7 @@ public:
                 if (from != to)
                 {
                     newCall(from, to);
+                    numVisitors++;
                 }
             }
             updateElevators();

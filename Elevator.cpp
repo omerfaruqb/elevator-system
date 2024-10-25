@@ -1,22 +1,57 @@
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 class Elevator
 {
 public:
     bool isMoving;
-    std::vector<int> stops;
+    std::vector<std::pair<int, bool>> stops; // {floor, isPickup}
+    std::vector<std::pair<int, bool>> reverseStops; // {floor, isPickup}
     int currentFloor;
     int passengers;
 
     Elevator(int startFloor)
         : currentFloor(startFloor), isMoving(false), passengers(0) {}
 
-    void addStop(int floor)
+    /**
+     * @brief Add a passenger to the elevator with specified pickup and dropoff floors (from -> to)
+     */
+    void addPassenger(int from, int to)
     {
-        stops.push_back(floor);
-        passengers++;
+        stops.emplace_back(from, true);
+        stops.emplace_back(to, false);
+        std::sort(stops.begin(), stops.end());
+        if (from > to) {
+            std::reverse(stops.begin(), stops.end());
+        }
         isMoving = true;
+    }
+
+    /**
+     * @brief Variant of addPassenger for the passengers in the reverse direction 
+     */
+    void addPassengerReverse(int from, int to)
+    {
+        reverseStops.emplace_back(from, true);
+        reverseStops.emplace_back(to, false);
+        std::sort(reverseStops.begin(), reverseStops.end());
+        if (from > to) {
+            std::reverse(reverseStops.begin(), reverseStops.end());
+        }
+        isMoving = true;
+    }
+
+    /**
+     * @brief Check if the elevator is moving up
+     */
+    bool isAscending() const
+    {
+        if (stops.empty())
+        {
+            return false;
+        }
+        return currentFloor < stops.front().first;
     }
 
     int distanceToFloor(int floor) const
@@ -24,39 +59,69 @@ public:
         return std::abs(currentFloor - floor);
     }
 
-    bool isIdle() const
-    {
-        return !isMoving && stops.empty();
-    }
-
-    int move()
+    int distanceToLastStop() const
     {
         if (stops.empty())
         {
-            isMoving = false;
             return 0;
         }
+        return stops.back().first - stops.front().first;
+    }
 
-        int nextStop = stops.front();
-        if (currentFloor < nextStop)
+    int lastStop() const
+    {
+        if (stops.empty())
         {
-            currentFloor++;
+            return currentFloor;
         }
-        else if (currentFloor > nextStop)
-        {
-            currentFloor--;
-        }
-        else
-        {
-            stops.erase(stops.begin());
-            passengers--;
-        }
+        return stops.back().first;
+    }
 
+    bool isIdle() const
+    {
+        return !isMoving;
+    }
+
+    bool move()
+    {   
+        // Check if reverse stops are not empty, in case the route of the elevator is finished
+        if (stops.empty() && !reverseStops.empty())
+        {
+            stops = reverseStops;
+            reverseStops.clear();
+        }
         if (stops.empty())
         {
             isMoving = false;
+            return false;
         }
 
-        return 1;
+        int nextStop = stops.front().first;
+        bool isPickup = stops.front().second;
+        currentFloor += isAscending() ? 1 : -1;
+
+        while (currentFloor == nextStop)
+        {
+            if (isPickup)
+            {
+                passengers++;
+            }
+            else
+            {
+                passengers--;
+            }
+            stops.erase(stops.begin());
+
+            if (stops.empty())
+            {
+                isMoving = false;
+                break;
+            }
+
+            nextStop = stops.front().first;
+            isPickup = stops.front().second;
+        }
+
+        return true;
     }
 };
