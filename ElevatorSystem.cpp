@@ -22,15 +22,16 @@ private:
     int numVisitors;
 
 public:
-    ElevatorSystem(int numElevators, int startingFloor)
+    ElevatorSystem(int numElevators, int startingFloor, int maxCapacity)
         : totalEnergyConsumed(0), totalWaitingTime(0), numVisitors(0)
     {
         for (int i = 0; i < numElevators; ++i)
         {
-            elevators.emplace_back(startingFloor);
+            elevators.emplace_back(startingFloor, maxCapacity);
         }
     }
 
+    // A basic algorithm to assign a new call to an elevator
     void newCall(int from, int to)
     {
         debug("[SYSTEM] New call: " << from << " -> " << to);
@@ -42,7 +43,7 @@ public:
             int shouldAscend = from < to;
             bool onTheWay = (elevator.isAscending() == shouldAscend) &&
                             ((shouldAscend && elevator.currentFloor <= from) || (!shouldAscend && elevator.currentFloor >= from));
-            
+
             if (elevator.isIdle() || onTheWay)
             {
                 int waitingTime = elevator.distanceToFloor(from) + abs(to - from);
@@ -61,14 +62,13 @@ public:
                 bestElevator->addPassenger(from, to);
                 debug("[SYSTEM] Elevator " << bestElevator->id << " is selected!");
                 return;
-                
             }
         }
 
         for (Elevator &elevator : elevators)
         {
             int waitingTime = elevator.distanceToLastStop() +
-                                abs(elevator.lastStop() - from) + abs(to - from);
+                              abs(elevator.lastStop() - from) + abs(to - from);
             int energyConsumed = 2 * abs(elevator.lastStop() - from);
             int cost = waitingTime + energyConsumed;
 
@@ -84,9 +84,10 @@ public:
     void updateElevators()
     {
         for (auto &elevator : elevators)
-        {   
+        {
             int numTotalPassengers = elevator.numPassengersPickedUp + elevator.numPassengersWaiting;
-            if(elevator.move()) {
+            if (elevator.move())
+            {
                 totalEnergyConsumed++;
                 totalWaitingTime += numTotalPassengers;
             }
@@ -104,11 +105,13 @@ public:
             {
                 int from = std::rand() % numFloors;
                 int to = std::rand() % numFloors;
-                if (from != to)
+                // Ensure that the from and to floors are different
+                while (from == to)
                 {
-                    newCall(from, to);
-                    numVisitors++;
+                    to = std::rand() % numFloors;
                 }
+                newCall(from, to);
+                numVisitors++;
             }
             updateElevators();
             currentTime++;

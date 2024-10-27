@@ -30,7 +30,7 @@ public:
     int numPassengersPickedUp;
     int capacity;
 
-    Elevator(int startFloor, int capacity = 10)
+    Elevator(int startFloor, int capacity)
         : id(nextId++), direction(IDLE), currentFloor(startFloor), numPassengersWaiting(0), numPassengersPickedUp(0), capacity(capacity) {}
 
     /**
