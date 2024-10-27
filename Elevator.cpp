@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG
 #define debug(x) std::cerr << x << std::endl
@@ -85,6 +85,9 @@ public:
         return direction == IDLE;
     }
 
+    /**
+     * @brief Sort the stops in the elevator in ascending or descending order
+     */
     void sortStops()
     {
         if (stops.size() < 2)
@@ -103,6 +106,9 @@ public:
         }
     }
 
+    /**
+     * @brief Move the elevator to the next floor
+     */
     bool move()
     {
         // Check if reverse stops are not empty, in case the route of the elevator is finished
