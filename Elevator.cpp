@@ -1,18 +1,37 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <cmath>
+
+#define DEBUG 1
+
+#if DEBUG
+#define debug(x) std::cerr << x << std::endl
+#else
+#define debug(x)
+#endif
 
 class Elevator
 {
 public:
-    bool isMoving;
-    std::vector<std::pair<int, bool>> stops; // {floor, isPickup}
+    static int nextId;
+    enum Direction
+    {
+        IDLE,
+        UP,
+        DOWN
+    };
+    int id;
+    Direction direction;
+    std::vector<std::pair<int, bool>> stops;        // {floor, isPickup}
     std::vector<std::pair<int, bool>> reverseStops; // {floor, isPickup}
     int currentFloor;
-    int passengers;
+    int numPassengersWaiting;
+    int numPassengersPickedUp;
+    int capacity;
 
-    Elevator(int startFloor)
-        : currentFloor(startFloor), isMoving(false), passengers(0) {}
+    Elevator(int startFloor, int capacity = 10)
+        : id(nextId++), direction(IDLE), currentFloor(startFloor), numPassengersWaiting(0), numPassengersPickedUp(0), capacity(capacity) {}
 
     /**
      * @brief Add a passenger to the elevator with specified pickup and dropoff floors (from -> to)
@@ -21,103 +40,110 @@ public:
     {
         stops.emplace_back(from, true);
         stops.emplace_back(to, false);
-        std::sort(stops.begin(), stops.end());
-        if (from > to) {
-            std::reverse(stops.begin(), stops.end());
-        }
-        isMoving = true;
+        sortStops();
+        numPassengersWaiting++;
     }
 
     /**
-     * @brief Variant of addPassenger for the passengers in the reverse direction 
+     * @brief Variant of addPassenger for the passengers in the reverse direction of the current elevator route
      */
     void addPassengerReverse(int from, int to)
     {
         reverseStops.emplace_back(from, true);
         reverseStops.emplace_back(to, false);
-        std::sort(reverseStops.begin(), reverseStops.end());
-        if (from > to) {
-            std::reverse(reverseStops.begin(), reverseStops.end());
-        }
-        isMoving = true;
+
+        numPassengersWaiting++;
     }
 
     /**
-     * @brief Check if the elevator is moving up
+     * @brief Get the last floor of the elevator heading to
      */
-    bool isAscending() const
-    {
-        if (stops.empty())
-        {
-            return false;
-        }
-        return currentFloor < stops.front().first;
-    }
-
-    int distanceToFloor(int floor) const
-    {
-        return std::abs(currentFloor - floor);
-    }
-
-    int distanceToLastStop() const
-    {
-        if (stops.empty())
-        {
-            return 0;
-        }
-        return stops.back().first - stops.front().first;
-    }
-
     int lastStop() const
     {
-        if (stops.empty())
-        {
-            return currentFloor;
-        }
-        return stops.back().first;
+        return stops.empty() ? currentFloor : stops.back().first;
+    }
+
+    bool isAscending() const
+    {
+        return direction == UP;
+    }
+
+    int distanceToFloor(int floor)
+    {
+        int distance = std::abs(currentFloor - floor);
+        return distance;
+    }
+
+    int distanceToLastStop()
+    {
+        int distance = stops.empty() ? 0 : distanceToFloor(stops.back().first);
+        return distance;
     }
 
     bool isIdle() const
     {
-        return !isMoving;
+        return direction == IDLE;
+    }
+
+    void sortStops()
+    {
+        if (stops.size() < 2)
+        {
+            return;
+        }
+
+        int firstFloor = stops.front().first;
+        int lastFloor = stops.back().first;
+
+        if (firstFloor < lastFloor)
+        {
+            std::sort(stops.begin(), stops.end());
+        } else {
+            std::sort(stops.rbegin(), stops.rend());
+        }
     }
 
     bool move()
-    {   
+    {
         // Check if reverse stops are not empty, in case the route of the elevator is finished
         if (stops.empty() && !reverseStops.empty())
         {
             stops = reverseStops;
             reverseStops.clear();
+            sortStops();
+            debug("Switched");
         }
-        if (stops.empty())
+        else if (stops.empty())
         {
-            isMoving = false;
+            direction = IDLE;
             return false;
         }
 
         int nextStop = stops.front().first;
         bool isPickup = stops.front().second;
-        currentFloor += isAscending() ? 1 : -1;
+        direction = currentFloor < nextStop ? UP : DOWN;
+        currentFloor += direction == UP ? 1 : -1;
 
         while (currentFloor == nextStop)
         {
             if (isPickup)
             {
-                passengers++;
+                numPassengersWaiting--;
+                numPassengersPickedUp++;
+                debug("[" << id << "] Picked up at " << currentFloor << ". Total: " << numPassengersPickedUp);
             }
             else
             {
-                passengers--;
+                numPassengersPickedUp--;
+                debug("[" << id << "] Dropped off at " << currentFloor << ". Total: " << numPassengersPickedUp);
             }
             stops.erase(stops.begin());
 
             if (stops.empty())
             {
-                isMoving = false;
+                direction = IDLE;
                 break;
             }
-
             nextStop = stops.front().first;
             isPickup = stops.front().second;
         }
@@ -125,3 +151,5 @@ public:
         return true;
     }
 };
+
+int Elevator::nextId = 0;

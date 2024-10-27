@@ -5,6 +5,14 @@
 #include <limits>
 #include "Elevator.cpp"
 
+#define DEBUG 1
+
+#if DEBUG
+#define debug(x) std::cerr << x << std::endl
+#else
+#define debug(x)
+#endif
+
 class ElevatorSystem
 {
 private:
@@ -25,6 +33,7 @@ public:
 
     void newCall(int from, int to)
     {
+        debug("[SYSTEM] New call: " << from << " -> " << to);
         Elevator *bestElevator = nullptr;
         int bestElevatorCost = std::numeric_limits<int>::max();
 
@@ -50,45 +59,44 @@ public:
             if (bestElevator != nullptr)
             {
                 bestElevator->addPassenger(from, to);
-                // numVisitors++;
-            }
-            else
-            {
-                for (Elevator &elevator : elevators)
-                {
-                    int waitingTime = elevator.distanceToLastStop() +
-                                      abs(elevator.lastStop() - from) + abs(to - from);
-                    int energyConsumed = 2 * abs(elevator.lastStop() - from);
-                    int cost = waitingTime + energyConsumed;
-
-                    if (cost < bestElevatorCost)
-                    {
-                        bestElevator = &elevator;
-                        bestElevatorCost = cost;
-                    }
-                }
-                bestElevator->addPassengerReverse(from, to);
+                debug("[SYSTEM] Elevator " << bestElevator->id << " is selected!");
+                return;
+                
             }
         }
+
+        for (Elevator &elevator : elevators)
+        {
+            int waitingTime = elevator.distanceToLastStop() +
+                                abs(elevator.lastStop() - from) + abs(to - from);
+            int energyConsumed = 2 * abs(elevator.lastStop() - from);
+            int cost = waitingTime + energyConsumed;
+
+            if (cost < bestElevatorCost)
+            {
+                bestElevator = &elevator;
+                bestElevatorCost = cost;
+            }
+        }
+        bestElevator->addPassengerReverse(from, to);
     }
 
     void updateElevators()
     {
         for (auto &elevator : elevators)
         {   
-            int previousPassengers = elevator.passengers;
+            int numTotalPassengers = elevator.numPassengersPickedUp + elevator.numPassengersWaiting;
             if(elevator.move()) {
                 totalEnergyConsumed++;
-                totalWaitingTime += previousPassengers;
+                totalWaitingTime += numTotalPassengers;
             }
-            // std::cout << "Previous passengers: " << previousPassengers << std::endl;
         }
     }
 
     void runSimulation(int numFloors, double visitorFrequency, int totalTime)
     {
         std::srand(std::time(0));
-        double currentTime = 0;
+        int currentTime = 0;
 
         while (currentTime < totalTime)
         {
@@ -112,6 +120,7 @@ public:
     {
         std::cout << "\nSimulation Results:\n";
         std::cout << "Total Energy Consumed: " << totalEnergyConsumed << " units\n";
+        std::cout << "Total Visitors: " << numVisitors << "\n";
         std::cout << "Average Waiting Time: " << (numVisitors > 0 ? totalWaitingTime / numVisitors : 0) << " seconds\n";
     }
 };

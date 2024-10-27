@@ -3,8 +3,8 @@
 int main()
 {
     int numFloors = 10;
-    int visitorFrequency = 10;
-    int totalTime = 1000;
+    double visitorFrequency = 0.5;
+    int totalTime = 100;
     int numElevators = 5;
     int startingFloor = 0;
 
