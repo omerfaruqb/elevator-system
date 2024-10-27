@@ -19,7 +19,7 @@ This project simulates an elevator system in a building with multiple floors, wh
    
 2. **Elevator Movement**: Each elevator handles stops sequentially, picking up or dropping off passengers based on the shortest route.
 
-3. **Metrics**: The simulation tracks total waiting time, energy consumption, and number of visitors.
+3. **Metrics**: The simulation tracks total waiting time, energy consumption.
 
 ## Usage
 
